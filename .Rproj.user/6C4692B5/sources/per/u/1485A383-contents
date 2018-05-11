@@ -1,0 +1,108 @@
+# This code in the language R is an example of doing project 1 for MRKT 845
+# The goal of this project is to build a predictive algorithm for a continuous variable and show that it is 
+# a stable model – ie that it still fits reasonably well when applied to a hold-out sample or “test sample.”
+
+# FIRST TASK: get the data from a csv file and put it into a data frame, then randomly split the
+# data frame into two files about 60/40 – the training data and the test data.
+
+# reading in the WWW master customer file sample and getting summary stats
+# Read the “Our Imaginary Enterprise” document and confirm its class as data frame,
+# and show the summary of all variables
+# find the Master Customer File for WWW in the filelist on Canvas and read it in below.
+
+mcf<- read.csv(file.choose(),header=TRUE,stringsAsFactors=FALSE) 
+class(mcf)
+summary(mcf)
+
+# Split the MCF into a training dataset and a test data set.
+dt = sort(sample(nrow(mcf), nrow(mcf)*.5))
+train<-mcf[dt,]
+test<-mcf[-dt,]
+nrow(train)
+nrow(test)
+head(train)
+head(test)
+summary(train)
+summary(test)
+
+# convert the training dataset variables (columns) into variables that are scaled from 0 to 1
+maxima <- apply(train, 2, max)
+minima <-apply(train, 2, min)
+trains <- scale(train, center=minima, scale=maxima-minima)
+trainsdf <- as.data.frame(trains, col.names=colnames(trains))
+summary(trainsdf)
+
+# convert the test dataset variables (columns) into variables that are scaled from 0 to 1
+maxima <- apply(test, 2, max)
+minima <-apply(test, 2, min)
+tests <- scale(test, center=minima, scale=maxima-minima)
+testsdf <- as.data.frame(tests, col.names=colnames(tests))
+summary(testsdf)
+
+
+# try a neural net on the training data set and keep trying different number of hidden nodes
+# and even number of hidden layers until you get convergence.
+# You may have to click on the “packages” tab in the lower right box, and then the
+# “install” tab and specify the neuralnet package in the dialog box in order to get the 
+# neuralnet package.
+library(neuralnet)
+nresults <- neuralnet(LTV ~ AGE+ SEX+ EDUC+ INCOME+ KIDHOME+ TEENHOME+ GOURMAGS+ WINEMAGS+ STYLMAGS+ HOUSMAGS+ SPRTMAGS+ TRAVMAGS+ CULTMAGS+ COMPMAGS+ FIRSTPUR+ LASTPUR+ TOTCPROF+ PCTWEB+ PERCDR+ PERCSR+ PERCDW+ PERCSW+ PERCEX, trainsdf, hidden=8, stepmax=80000, threshold=0.08)
+
+summary(nresults)   #What things are inside the results object?
+
+plot(nresults)   #take a look at a graph of the results
+trainp<- nresults$net.result     #assign the predictions of the dependent variable to an object
+trainp<-as.data.frame(trainp)   #turn the 12000 x 1 column vector into a data frame
+class(trainp)
+names(trainp)[1]<-paste("PRED")   # name the prediction variable 
+head(trainp)
+# This section merges the training data frame with the predictions of the dependent variable
+tds<-as.matrix(trainsdf)
+trs<-as.matrix(trainp)
+mcfp<-cbind(tds,trs)   # the cbind functions merges two matrices by columns
+
+# Now, calculate root-mean-square error of the predictions made by the neural net
+mcfpdf<-as.data.frame(mcfp)  # convert the merged training portion of the master customer file to a df
+mcfpdf$d2 <- (mcfpdf$LTV-mcfpdf$PRED)^2  # calculate the squared difference between the actual
+#                                                                                  dependent variable and the prediction
+tail(mcfpdf)
+rmstrain <- sqrt(mean(mcfpdf$d2))    
+rmstrain                           # rmstrain is the root-mean squared error
+# for the training data set
+
+
+# Now, determine the root-mean square error for the test data set when applying the neural
+# net solution that was developed on the training data set. That is, does the neural net solution
+# developed on the training data set 
+
+testresults <- subset(testsdf, select=c(AGE,SEX,EDUC,INCOME,KIDHOME,TEENHOME,GOURMAGS,WINEMAGS,STYLMAGS,HOUSMAGS,SPRTMAGS,TRAVMAGS,CULTMAGS,COMPMAGS,FIRSTPUR,LASTPUR,TOTCPROF,PCTWEB,PERCDR,PERCSR,PERCDW,PERCSW,PERCEX))
+
+testr <- compute(nresults,testresults)
+
+testsdf$PRED<- testr$net.result     #assign the predictions of the dependent variable to a variable 
+#                                                              in the test data frame, preparatory to calculating rms error
+testsdf$PRED<-testsdf$PRED-(mean(testsdf$PRED)-mean(testsdf$LTV))  #subtract out the difference
+#btwn mean prediction and
+#mean actual dep. variable
+
+summary(testsdf)
+
+# Now, calculate root-mean-square error of the predictions made by the neural net
+
+testsdf$d2 <- (testsdf$LTV-testsdf$PRED)^2  # calculate the squared difference between the actual
+#                                                                                  dependent variable and the prediction in test df
+tail(testsdf)
+rmstest <- sqrt(mean(testsdf$d2))    
+rmstest                           # rmstest is the root-mean squared error
+# for the test data set
+
+
+
+
+
+
+
+
+
+
+

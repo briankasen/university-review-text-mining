@@ -1,0 +1,23 @@
+W=c(NA,7,8,9,123)
+
+max(W)
+
+W=c(NA,7,8,9,123)
+
+max(W,na.rm=TRUE)
+
+
+rules<-apriori(data=Authors, parameter=list(supp=0.002,conf = 0.10,minlen=4),
+               
+               appearance = list(default="lhs",rhs="Tom Clancy"),
+               
+               control = list(verbose=F))
+
+
+Df = data.frame(al=c(5,5,5),bl=c(1,2,3),cl=c(3,2,1))
+
+mean(Df$bl)
+
+W=c(NA,7,8,9,123)
+
+max(W,na.rm=FALSE)
